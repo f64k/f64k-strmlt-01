@@ -78,7 +78,7 @@ def load_dataframes_from_hf(repo: HfRepo, lstCsvFiles: list[str] = []) -> {str, 
         if os.path.exists(file_loaded):
             compress = "zip" if file_loaded.lower().endswith("zip") else None
             df_loaded = pd.read_csv(file_loaded, sep=";", encoding = "utf-8", compression=compress)
-            dict_res[fl_name] = df_process_v_column(df_loaded)
+            dict_res[fl_name] = df_loaded # df_Vproc = df_process_v_column(df_loaded)
     return dict_res
 
 ### список CSV и ZIP файлов (c уровнем вложенности) в репозитории
