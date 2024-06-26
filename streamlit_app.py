@@ -1,110 +1,71 @@
-import streamlit as st 
-import pandas as pd
+import os, re, sys, time, math, shutil, urllib, string, random, pickle, zipfile, datetime
+import streamlit as st, pandas as pd, numpy as np
+import my_static_methods as my_stm
 
-st.balloons()
-st.markdown("# Data Evaluation App")
+st.html(my_stm.STYLE_CORRECTION)
+st.sidebar.markdown("🧊 проверка по пакетам XYZ")
 
-st.write("We are so glad to see you here. ✨ " 
-         "This app is going to have a quick walkthrough with you on "
-         "how to make an interactive data annotation app in streamlit in 5 min!")
+def ReRun():
+    st.rerun()
 
-st.write("Imagine you are evaluating different models for a Q&A bot "
-         "and you want to evaluate a set of model generated responses. "
-        "You have collected some user data. "
-         "Here is a sample question and response set.")
+def DescriptionMarkdown() -> str:
+    return """
+        ## Описание
+        # 1) Загрузка нового файла
+        Источником данных является файл CSV
+    """
 
-data = {
-    "Questions": 
-        ["Who invented the internet?"
-        , "What causes the Northern Lights?"
-        , "Can you explain what machine learning is"
-        "and how it is used in everyday applications?"
-        , "How do penguins fly?"
-    ],           
-    "Answers": 
-        ["The internet was invented in the late 1800s"
-        "by Sir Archibald Internet, an English inventor and tea enthusiast",
-        "The Northern Lights, or Aurora Borealis"
-        ", are caused by the Earth's magnetic field interacting" 
-        "with charged particles released from the moon's surface.",
-        "Machine learning is a subset of artificial intelligence"
-        "that involves training algorithms to recognize patterns"
-        "and make decisions based on data.",
-        " Penguins are unique among birds because they can fly underwater. "
-        "Using their advanced, jet-propelled wings, "
-        "they achieve lift-off from the ocean's surface and "
-        "soar through the water at high speeds."
-    ]
-}
+def save_dataframe_nodialog_idxyz(new_filename, dfToSave):
+    commit_info = my_stm.save_dataframe_to_hf(REPO, dfToSave, new_filename, "ID_XYZ")
+    st.toast(commit_info, icon='😍')
+    ReRun()
 
-df = pd.DataFrame(data)
 
-st.write(df)
-
-st.write("Now I want to evaluate the responses from my model. "
-         "One way to achieve this is to use the very powerful `st.data_editor` feature. "
-         "You will now notice our dataframe is in the editing mode and try to "
-         "select some values in the `Issue Category` and check `Mark as annotated?` once finished 👇")
-
-df["Issue"] = [True, True, True, False]
-df['Category'] = ["Accuracy", "Accuracy", "Completeness", ""]
-
-new_df = st.data_editor(
-    df,
-    column_config = {
-        "Questions":st.column_config.TextColumn(
-            width = "medium",
-            disabled=True
-        ),
-        "Answers":st.column_config.TextColumn(
-            width = "medium",
-            disabled=True
-        ),
-        "Issue":st.column_config.CheckboxColumn(
-            "Mark as annotated?",
-            default = False
-        ),
-        "Category":st.column_config.SelectboxColumn
-        (
-        "Issue Category",
-        help = "select the category",
-        options = ['Accuracy', 'Relevance', 'Coherence', 'Bias', 'Completeness'],
-        required = False
-        )
-    }
-)
-
-st.write("You will notice that we changed our dataframe and added new data. "
-         "Now it is time to visualize what we have annotated!")
-
-st.divider()
-
-st.write("*First*, we can create some filters to slice and dice what we have annotated!")
+REPO = my_stm.HfRepo("f64k/gaziev", "dataset", st.secrets["HF_WRITE"])
+lstRepoFiles = my_stm.list_files_hf(REPO)
+lstTestFilesIdXyz = [f.upper().replace("ID_XYZ/","") for f in lstRepoFiles if f.upper().startswith("ID_XYZ/")]
 
 col1, col2 = st.columns([1,1])
-with col1:
-    issue_filter = st.selectbox("Issues or Non-issues", options = new_df.Issue.unique())
-with col2:
-    category_filter = st.selectbox("Choose a category", options  = new_df[new_df["Issue"]==issue_filter].Category.unique())
+with col1.container():
+    cont_cols = st.columns([1,2])
+    cont_cols[0].popover("?").markdown(DescriptionMarkdown())
+    with cont_cols[1].popover("добавить новый файл"):
+        uploaded_file = st.file_uploader("“откройте CSV для загрузки”", ["csv"])
+        if uploaded_file is not None:
+            dfLoaded = None
+            delim = ";"
+            enc = "utf-8"
+            if uploaded_file.type == "text/csv":
+                try: dfLoaded = pd.read_csv(uploaded_file, sep=delim, encoding=enc)
+                except Exception as ex: st.write(ex)
+            else:
+                if uploaded_file.type == "application/x-zip-compressed":
+                    try: dfLoaded = pd.read_csv(uploaded_file, sep=delim, encoding=enc, compression="zip")
+                    except Exception as ex: st.write(ex)
+                else:
+                    st.error(uploaded_file.type)
+            # dataframe ready. try to upload to HF
+            if not dfLoaded is None:
+                dfToUpload = dfLoaded.query("ID!='ID'")
+                #col2.dataframe(df)
+                colnames = "".join(dfToUpload.columns)
+                if colnames.lower().startswith("idxyz"):
+                    dgID = dfToUpload.groupby("ID")
+                    dictGroupID = dict(list(dgID))
+                    lstGroupIDs = list(dictGroupID.keys())
+                    #col2.write(dictGroupID)
+                    lst_len = list(set(dgID.apply(len)))
+                    if len(lst_len) == 1:
+                        fileXYZ = f"{colnames}_{len(dictGroupID)}_{lst_len[0]}_{lstGroupIDs[0]}_{lstGroupIDs[-1]}.csv".upper()
+                        if fileXYZ in lstTestFilesIdXyz:
+                            if st.button(f"такой файл есть! перезаписать файл '{fileXYZ}'?"):
+                                save_dataframe_nodialog_idxyz(fileXYZ, dfToUpload)
+                        else:
+                            save_dataframe_nodialog_idxyz(fileXYZ, dfToUpload)
+                    else:
+                        st.error(f"Разные размеры пакетов для разных ID, варианты : {lst_len}")
+    # список уже имеющихся файлов
+    st.write(lstTestFilesIdXyz)
+#with col1.container():
 
-st.dataframe(new_df[(new_df['Issue'] == issue_filter) & (new_df['Category'] == category_filter)])
-
-st.markdown("")
-st.write("*Next*, we can visualize our data quickly using `st.metrics` and `st.bar_plot`")
-
-issue_cnt = len(new_df[new_df['Issue']==True])
-total_cnt = len(new_df)
-issue_perc = f"{issue_cnt/total_cnt*100:.0f}%"
-
-col1, col2 = st.columns([1,1])
-with col1:
-    st.metric("Number of responses",issue_cnt)
-with col2:
-    st.metric("Annotation Progress", issue_perc)
-
-df_plot = new_df[new_df['Category']!=''].Category.value_counts().reset_index()
-
-st.bar_chart(df_plot, x = 'Category', y = 'count')
-
-st.write("Here we are at the end of getting started with streamlit! Happy Streamlit-ing! :balloon:")
 
