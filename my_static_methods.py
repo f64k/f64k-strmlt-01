@@ -23,6 +23,7 @@ STYLE_CORRECTION = " ".join([
     "div[data-testid='stSidebarHeader'] { display:none }",
     "div[data-testid='stAppViewBlockContainer'] { padding:1em }",
     "div[data-testid='collapsedControl'] { background-color:#EEE }",
+    "a[href='https://streamlit.io/cloud'] { display:none }"
     "</style>"
 ])
 
