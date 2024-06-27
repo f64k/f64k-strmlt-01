@@ -35,7 +35,7 @@ def save_dataframe_nodialog_idxyz(new_filename, dfToSave):
 #st.sidebar.markdown("🧊 проверка по пакетам XYZ")
 
 with st.container():
-    cols1 = st.columns([1,13]) # vertical_alignment: "center"
+    cols1 = st.columns([1,12]) # vertical_alignment: "center"
     cols1[0].popover("❓", help="пояснения").markdown(DescriptionMarkdown())
     cols1[1].info("🔮 проверка предсказаний по пакетам ID_XYZ. 📜 формат CSV. 🧊 названия столбцов ID;X;Y;Z. 📐 размер пакетов одинаковый.")
 
@@ -108,7 +108,7 @@ if selectedFile is not None:
         df_packs_reshaped = dgID.apply(lambda df: pd.Series(df[xyz].values[::-1].reshape(1,-1)[0])).reset_index()
         x_test_vect = df_packs_reshaped.iloc[:,1:]
         df_packs_reshaped["Прогноз_V"] = classifier_object.predict(x_test_vect)
-        col2.dataframe(df_packs_reshaped[["ID","Прогноз_V"]], height=600)
+        col2.dataframe(df_packs_reshaped[["ID","Прогноз_V"]], height=620)
 
 
 
