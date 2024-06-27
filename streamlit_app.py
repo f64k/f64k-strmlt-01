@@ -116,7 +116,7 @@ if selectedFile is not None:
         xyz = ["X","Y","Z"]
         df_packs_reshaped = dgID.apply(lambda df: pd.Series(df[xyz].values[::-1].reshape(1,-1)[0])).reset_index()
         x_test_vect = df_packs_reshaped.iloc[:,1:]
-        df_packs_reshaped["Прогноз_V"] = classifier_object.predict(x_test_vect)
+        df_packs_reshaped["Прогноз_V"] = classifier_object.predict(x_test_vect.values)
         col2.dataframe(df_packs_reshaped[["ID","Прогноз_V"]], height=620)
 
 
