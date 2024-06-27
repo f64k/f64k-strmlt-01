@@ -119,6 +119,6 @@ if selectedFile is not None:
         df_packs_reshaped["Прогноз_V"] = classifier_object.predict(x_test_vect.values)
         col2.dataframe(df_packs_reshaped[["ID","Прогноз_V"]], height=620)
         # для отладки
-        col2.write(st.session_state)
+        # col2.write(st.session_state)
 
 
