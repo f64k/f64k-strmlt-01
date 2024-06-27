@@ -18,7 +18,7 @@ if True:
         "libc_ver": platform.libc_ver(),
         "architecture": platform.architecture(),
     }
-    st.sidebar.write(dirParams)
+    #st.sidebar.write(dirParams)
 
 
 REPO = my_stm.HfRepo("f64k/gaziev", "dataset", st.secrets["HF_WRITE"])
