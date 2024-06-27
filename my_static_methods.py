@@ -90,7 +90,7 @@ def load_dataframes_from_hf(repo: HfRepo, lstCsvFiles: list[str] = []) -> {str, 
 ### https://huggingface.co/docs/huggingface_hub/en/guides/hf_file_system
 def list_files_hf(repo: HfRepo) -> list[str]:
     """ List CSV and ZIP files in HF repo """
-    fs = huggingface_hub.HfFileSystem(token=repo.token, skip_instance_cache=True)
+    fs = huggingface_hub.HfFileSystem(token=repo.token, use_listings_cache=False) # , skip_instance_cache=True
     path_hf = f"{repo.repo_type}s/{repo.repo_id}/"
     #lst = fs.ls(path_hf, detail=False)
     lstGlob = fs.glob(path_hf + "**") # map(os.path.basename, lstGlob)
