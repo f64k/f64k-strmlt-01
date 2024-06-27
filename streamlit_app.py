@@ -2,7 +2,7 @@ import os, re, sys, time, math, shutil, urllib, string, random, pickle, zipfile,
 import streamlit as st, pandas as pd, numpy as np
 import my_static_methods as my_stm
 
-st.html(my_stm.STYLE_CORRECTION)
+#st.html(my_stm.STYLE_CORRECTION)
 
 REPO = my_stm.HfRepo("f64k/gaziev", "dataset", st.secrets["HF_WRITE"])
 lstRepoFiles = my_stm.list_files_hf(REPO) # список уже имеющихся в репозитории файлов
@@ -35,7 +35,7 @@ def save_dataframe_nodialog_idxyz(new_filename, dfToSave):
 #st.sidebar.markdown("🧊 проверка по пакетам XYZ")
 
 with st.container():
-    cols1 = st.columns([1,21]) # vertical_alignment: "center"
+    cols1 = st.columns([1,10]) # vertical_alignment: "center"
     cols1[0].popover("❓", help="пояснения").markdown(DescriptionMarkdown())
     cols1[1].info("🔮 проверка предсказаний по пакетам ID_XYZ. 📜 формат CSV. 🧊 названия столбцов ID;X;Y;Z. 📐 размер пакетов одинаковый.")
 
