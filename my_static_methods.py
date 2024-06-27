@@ -95,6 +95,7 @@ def list_files_hf(repo: HfRepo) -> list[str]:
     #lst = fs.ls(path_hf, detail=False)
     lstGlob = fs.glob(path_hf + "**") # map(os.path.basename, lstGlob)
     lstNames = [fname.replace(path_hf, "") for fname in lstGlob if fname.lower().endswith(".csv") or fname.lower().endswith(".zip")]
+    print(f"{lstNames=}")
     return lstNames
 
 ###

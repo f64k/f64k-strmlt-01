@@ -73,7 +73,7 @@ with col1.popover("🆕 добавить новый файл", use_container_wid
             #col2.dataframe(df)
             colnames = "".join(dfToUpload.columns)
             if colnames.upper().startswith("IDXYZ"):
-                dgID = dfToUpload.groupby("ID")
+                dgID = dfToUpload.groupby("ID") # , include_groups=False
                 dictGroupID = dict(list(dgID))
                 lstGroupIDs = list(dictGroupID.keys())
                 #col2.write(dictGroupID)
@@ -90,7 +90,7 @@ with col1.popover("🆕 добавить новый файл", use_container_wid
             else:
                 st.error(f"Столбцы не ID;X;Y;Z ! Наблюдаем столбцы : {colnames}")
 
-# список уже имеющихся в репозитории файлов
+# список уже имеющихся в репозитории файлов. повторное чтение
 lstRepoFiles = my_stm.list_files_hf(REPO)
 dictTestFilesIdXyz = {f.upper().replace("ID_XYZ/",""): f.upper() for f in lstRepoFiles if f.upper().startswith("ID_XYZ/")}
 selectedFile = col1.radio("📰 загруженные тестовые пакеты", dictTestFilesIdXyz.keys(), index=None)
@@ -101,7 +101,7 @@ if selectedFile is not None:
     if len(dict_ONE_IDXYZ) > 0:
         df_idxyz = list(dict_ONE_IDXYZ.values())[0]
         dfShow = df_idxyz
-        dgID = df_idxyz.groupby("ID")
+        dgID = df_idxyz.groupby("ID") # , include_groups=False
         dictGroupID = dict(list(dgID))
         dfShow = dgID.apply(len).reset_index()
         #col1.dataframe(dfShow, height=400)
@@ -118,6 +118,7 @@ if selectedFile is not None:
         x_test_vect = df_packs_reshaped.iloc[:,1:]
         df_packs_reshaped["Прогноз_V"] = classifier_object.predict(x_test_vect.values)
         col2.dataframe(df_packs_reshaped[["ID","Прогноз_V"]], height=620)
-
+        # для отладки
+        col2.write(st.session_state)
 
 
