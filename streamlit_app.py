@@ -35,11 +35,11 @@ def save_dataframe_nodialog_idxyz(new_filename, dfToSave):
 #st.sidebar.markdown("🧊 проверка по пакетам XYZ")
 
 with st.container():
-    cols1 = st.columns([1,16]) # vertical_alignment: "center"
+    cols1 = st.columns([1,13]) # vertical_alignment: "center"
     cols1[0].popover("❓", help="пояснения").markdown(DescriptionMarkdown())
     cols1[1].info("🔮 проверка предсказаний по пакетам ID_XYZ. 📜 формат CSV. 🧊 названия столбцов ID;X;Y;Z. 📐 размер пакетов одинаковый.")
 
-col1, col2 = st.columns([3,2])
+col1, col2 = st.columns([4,2])
 
 with col1.popover("🆕 добавить новый файл", use_container_width=False):
     uploaded_file = st.file_uploader("💾 “откройте CSV для загрузки”", ["csv"])
