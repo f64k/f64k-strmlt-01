@@ -1,8 +1,25 @@
-import os, re, sys, time, math, shutil, urllib, string, random, pickle, zipfile, datetime
+import os, re, sys, time, math, shutil, urllib, string, random, pickle, zipfile, datetime, platform
 import streamlit as st, pandas as pd, numpy as np
 import my_static_methods as my_stm
 
-st.html(my_stm.STYLE_CORRECTION)
+if True:
+    st.html(my_stm.STYLE_CORRECTION)
+    dirParams = {
+        "os.getcwd": os.getcwd(),
+        "os.listdir": os.listdir(),
+        "platform": platform.platform(),
+        "node": platform.node(),
+        "processor": platform.processor(),
+        "machine": platform.machine(),
+        "system": platform.system(),
+        "version": platform.version(),
+        "python_version": platform.python_version(),
+        "uname": platform.uname(),
+        "libc_ver": platform.libc_ver(),
+        "architecture": platform.architecture(),
+    }
+    st.sidebar.write(dirParams)
+
 
 REPO = my_stm.HfRepo("f64k/gaziev", "dataset", st.secrets["HF_WRITE"])
 lstRepoFiles = my_stm.list_files_hf(REPO) # список уже имеющихся в репозитории файлов
@@ -43,9 +60,10 @@ def save_dataframe_nodialog_idxyz(new_filename, dfToSave):
 #st.sidebar.markdown("🧊 проверка по пакетам XYZ")
 
 with st.container():
-    cols1 = st.columns([1,12]) # vertical_alignment: "center"
-    cols1[0].popover("❓", help="пояснения").markdown(DescriptionMarkdown())
-    cols1[1].info("🔮 проверка предсказаний по пакетам ID_XYZ. 📜 формат CSV. 🧊 названия столбцов ID;X;Y;Z. 📐 размер пакетов одинаковый.")
+    cols1 = st.columns([1,12], vertical_alignment="center")
+    strBanner = "🔮 проверка предсказаний по пакетам ID_XYZ. \n 📜 формат CSV. \n 🧊 названия столбцов ID;X;Y;Z. \n 📐 размер пакетов одинаковый."
+    cols1[0].popover("❓", help=strBanner).markdown(DescriptionMarkdown())
+    cols1[1].info(strBanner)
 
 #col1, col2 = st.columns([2,5])
 col1, col2 = st.columns([4,2])
@@ -84,7 +102,8 @@ with col1.popover("🆕 добавить новый файл", use_container_wid
                         if st.button(f"такой файл есть! перезаписать файл '{fileXYZ}'?"):
                             save_dataframe_nodialog_idxyz(fileXYZ, dfToUpload)
                     else:
-                        save_dataframe_nodialog_idxyz(fileXYZ, dfToUpload)
+                        if st.button(f"новый файл '{fileXYZ}' - Записать на сервер?"):
+                            save_dataframe_nodialog_idxyz(fileXYZ, dfToUpload)
                 else:
                     st.error(f"Разные размеры пакетов для разных ID, варианты : {lst_len}")
             else:
@@ -118,7 +137,9 @@ if selectedFile is not None:
         x_test_vect = df_packs_reshaped.iloc[:,1:]
         df_packs_reshaped["Прогноз_V"] = classifier_object.predict(x_test_vect.values)
         col2.dataframe(df_packs_reshaped[["ID","Прогноз_V"]], height=620)
-        # для отладки
-        # col2.write(st.session_state)
 
+        # col2.write(st.session_state) # для отладки
+    else:
+        col2.write(st.session_state) # для отладки
+        col2.warning(f"Не найден на сервере файл '{selectedFile}'")
 
