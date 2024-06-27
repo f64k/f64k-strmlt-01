@@ -3,10 +3,19 @@ import streamlit as st, pandas as pd, numpy as np
 import my_static_methods as my_stm
 
 st.html(my_stm.STYLE_CORRECTION)
-#st.sidebar.markdown("🧊 проверка по пакетам XYZ")
-st.info("🧊 проверка предсказаний по пакетам XYZ")
 
-def ReRun():
+REPO = my_stm.HfRepo("f64k/gaziev", "dataset", st.secrets["HF_WRITE"])
+lstRepoFiles = my_stm.list_files_hf(REPO) # список уже имеющихся в репозитории файлов
+dictTestFilesIdXyz = {f.upper().replace("ID_XYZ/",""): f.upper() for f in lstRepoFiles if f.upper().startswith("ID_XYZ/")}
+
+@st.cache_data
+def GetListOf_XYZV_ToTrainClassifier(repo):
+    lstRepoZipFiles = ["TrainData_1504_AB_gaziev.zip","TestData_1504_AB_gaziev.zip","TestData3_2204_noAB_gaziev.zip"]
+    dictTrainThreeDataframes = my_stm.load_dataframes_from_hf(REPO, lstRepoZipFiles)
+    lstDfOriginal = [my_stm.df_process_v_column(df) for df in dictTrainThreeDataframes.values()]
+    return lstDfOriginal
+
+def ReRun() :
     try: st.rerun()
     except: pass
 
@@ -15,6 +24,7 @@ def DescriptionMarkdown() -> str:
         ## Описание
         ### 1) Загрузка нового файла
         Источником данных является файл CSV
+        Первая строка - названия столбцов ID;X;Y;Z
     """
 
 def save_dataframe_nodialog_idxyz(new_filename, dfToSave):
@@ -22,66 +32,83 @@ def save_dataframe_nodialog_idxyz(new_filename, dfToSave):
     st.toast(commit_info, icon='🆕')
     ReRun()
 
+#st.sidebar.markdown("🧊 проверка по пакетам XYZ")
 
-REPO = my_stm.HfRepo("f64k/gaziev", "dataset", st.secrets["HF_WRITE"])
-lstRepoFiles = my_stm.list_files_hf(REPO)
-dictTestFilesIdXyz = {f.upper().replace("ID_XYZ/",""): f.upper() for f in lstRepoFiles if f.upper().startswith("ID_XYZ/")}
+with st.container():
+    cols1 = st.columns([1,21]) # vertical_alignment: "center"
+    cols1[0].popover("❓", help="пояснения").markdown(DescriptionMarkdown())
+    cols1[1].info("🔮 проверка предсказаний по пакетам ID_XYZ. 📜 формат CSV. 🧊 названия столбцов ID;X;Y;Z. 📐 размер пакетов одинаковый.")
 
-col1, col2 = st.columns([1,1])
-with col1.container():
-    cont_cols = st.columns([1,2])
-    cont_cols[0].popover("❓").markdown(DescriptionMarkdown())
-    with cont_cols[1].popover("🆕 добавить новый файл"):
-        uploaded_file = st.file_uploader("💾 “откройте CSV для загрузки”", ["csv"])
-        if uploaded_file is not None:
-            dfLoaded = None
-            delim = ";"
-            enc = "utf-8"
-            if uploaded_file.type == "text/csv":
-                try: dfLoaded = pd.read_csv(uploaded_file, sep=delim, encoding=enc)
+col1, col2 = st.columns([2,5])
+
+with col1.popover("🆕 добавить новый файл", use_container_width=False):
+    uploaded_file = st.file_uploader("💾 “откройте CSV для загрузки”", ["csv"])
+    if uploaded_file is not None:
+        dfLoaded = None
+        delim = ";"
+        enc = "utf-8"
+        if uploaded_file.type == "text/csv":
+            try: dfLoaded = pd.read_csv(uploaded_file, sep=delim, encoding=enc)
+            except Exception as ex: st.write(ex)
+        else:
+            if uploaded_file.type == "application/x-zip-compressed":
+                try: dfLoaded = pd.read_csv(uploaded_file, sep=delim, encoding=enc, compression="zip")
                 except Exception as ex: st.write(ex)
             else:
-                if uploaded_file.type == "application/x-zip-compressed":
-                    try: dfLoaded = pd.read_csv(uploaded_file, sep=delim, encoding=enc, compression="zip")
-                    except Exception as ex: st.write(ex)
-                else:
-                    st.error(uploaded_file.type)
-            # dataframe ready. try to upload to HF
-            if not dfLoaded is None:
-                dfToUpload = dfLoaded
-                if "ID" in dfToUpload.columns:
-                    dfToUpload = dfLoaded.query("ID!='ID'")
-                #col2.dataframe(df)
-                colnames = "".join(dfToUpload.columns)
-                if colnames.upper().startswith("IDXYZ"):
-                    dgID = dfToUpload.groupby("ID")
-                    dictGroupID = dict(list(dgID))
-                    lstGroupIDs = list(dictGroupID.keys())
-                    #col2.write(dictGroupID)
-                    lst_len = list(set(dgID.apply(len)))
-                    if len(lst_len) == 1:
-                        fileXYZ = f"{colnames}_{len(dictGroupID)}x{lst_len[0]}_{lstGroupIDs[0]}_{lstGroupIDs[-1]}.csv".upper()
-                        if fileXYZ in dictTestFilesIdXyz.keys():
-                            if st.button(f"такой файл есть! перезаписать файл '{fileXYZ}'?"):
-                                save_dataframe_nodialog_idxyz(fileXYZ, dfToUpload)
-                        else:
+                st.error(uploaded_file.type)
+        # dataframe ready. try to upload to HF
+        if not dfLoaded is None:
+            dfToUpload = dfLoaded
+            if "ID" in dfToUpload.columns:
+                dfToUpload = dfLoaded.query("ID!='ID'")
+            #col2.dataframe(df)
+            colnames = "".join(dfToUpload.columns)
+            if colnames.upper().startswith("IDXYZ"):
+                dgID = dfToUpload.groupby("ID")
+                dictGroupID = dict(list(dgID))
+                lstGroupIDs = list(dictGroupID.keys())
+                #col2.write(dictGroupID)
+                lst_len = list(set(dgID.apply(len)))
+                if len(lst_len) == 1:
+                    fileXYZ = f"{colnames}_{len(dictGroupID)}x{lst_len[0]}_{lstGroupIDs[0]}_{lstGroupIDs[-1]}.csv".upper()
+                    if fileXYZ in dictTestFilesIdXyz.keys():
+                        if st.button(f"такой файл есть! перезаписать файл '{fileXYZ}'?"):
                             save_dataframe_nodialog_idxyz(fileXYZ, dfToUpload)
                     else:
-                        st.error(f"Разные размеры пакетов для разных ID, варианты : {lst_len}")
+                        save_dataframe_nodialog_idxyz(fileXYZ, dfToUpload)
                 else:
-                    st.error(f"Столбцы не ID;X;Y;Z ! Наблюдаем столбцы : {colnames}")
-    # список уже имеющихся файлов
-    selectedFile = st.radio("📰 загруженные тестовые пакеты", dictTestFilesIdXyz.keys(), index=None)
-    if selectedFile is not None:
-        dict_ONE_IDXYZ = my_stm.load_dataframes_from_hf(REPO, [dictTestFilesIdXyz[selectedFile]])
-        if len(dict_ONE_IDXYZ) > 0:
-            df_idxyz = list(dict_ONE_IDXYZ.values())[0]
-            dfShow = df_idxyz
-            dgID = df_idxyz.groupby("ID")
-            dictGroupID = dict(list(dgID))
-            dfShow = dgID.apply(len) #.reset_index()
-            col2.dataframe(dfShow, height=700)
+                    st.error(f"Разные размеры пакетов для разных ID, варианты : {lst_len}")
+            else:
+                st.error(f"Столбцы не ID;X;Y;Z ! Наблюдаем столбцы : {colnames}")
 
+# список уже имеющихся в репозитории файлов
+lstRepoFiles = my_stm.list_files_hf(REPO)
+dictTestFilesIdXyz = {f.upper().replace("ID_XYZ/",""): f.upper() for f in lstRepoFiles if f.upper().startswith("ID_XYZ/")}
+selectedFile = col1.radio("📰 загруженные тестовые пакеты", dictTestFilesIdXyz.keys(), index=None)
+
+# выбран файл для предсказания
+if selectedFile is not None:
+    dict_ONE_IDXYZ = my_stm.load_dataframes_from_hf(REPO, [dictTestFilesIdXyz[selectedFile]])
+    if len(dict_ONE_IDXYZ) > 0:
+        df_idxyz = list(dict_ONE_IDXYZ.values())[0]
+        dfShow = df_idxyz
+        dgID = df_idxyz.groupby("ID")
+        dictGroupID = dict(list(dgID))
+        dfShow = dgID.apply(len).reset_index()
+        #col1.dataframe(dfShow, height=400)
+        pack_size = list(set(dgID.apply(len)))[0]
+        lstDfOriginal = GetListOf_XYZV_ToTrainClassifier(REPO)
+        classifier_object, df_train_with_predict, time_elapsed = my_stm.GetClassifier(lstDfOriginal, pack_size-1)
+        col2.popover(type(classifier_object).__name__).write(type(classifier_object))
+        # прогноз на обучающей выборке
+        columns_xyzv = [c for c in df_train_with_predict.columns if "Vis" in c] + [c for c in df_train_with_predict.columns if c[0] in "XYZ"]
+        #col2.dataframe(df_train_with_predict[columns_xyzv], height=650)
+        # расчет пакетов
+        xyz = ["X","Y","Z"]
+        df_packs_reshaped = dgID.apply(lambda df: pd.Series(df[xyz].values[::-1].reshape(1,-1)[0])).reset_index()
+        x_test_vect = df_packs_reshaped.iloc[:,1:]
+        df_packs_reshaped["Прогноз_V"] = classifier_object.predict(x_test_vect)
+        col2.dataframe(df_packs_reshaped[["ID","Прогноз_V"]], height=650)
 
 
 

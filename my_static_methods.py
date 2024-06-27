@@ -1,8 +1,12 @@
 from typing import Union, NamedTuple
-import os, io
+import io,os,re,sys,math,time,uuid,ctypes,pickle,psutil,random,shutil,string,urllib,decimal,datetime,itertools,traceback,collections,statistics
 import numpy as np, pandas as pd
 import plotly.express as px
 import huggingface_hub
+
+import sklearn #, statsmodels
+from sklearn import svm, neighbors, naive_bayes, neural_network, tree, ensemble, linear_model, discriminant_analysis, gaussian_process, manifold, cluster
+#from statsmodels.tsa import seasonal
 
 os.makedirs(".temp", exist_ok=True) # for temporary local files
 
@@ -105,11 +109,58 @@ def plotly_xyzv_scatter_gray(df3D):
     return fig
 
 
+# lstRepoZipFiles = ["TrainData_1504_AB_gaziev.zip","TestData_1504_AB_gaziev.zip","TestData3_2204_noAB_gaziev.zip"]
+### returns (classifier_object, df_train_with_predict, time_elapsed)
+def GetClassifier(lstDfOriginal, nHystorySteps) :
+    #lstDfOriginal = [df_9125_Train, df_12010_Test, df_9051_Test3]
+    nShift = nHystorySteps
+    nCurrShift = nHystorySteps
+    classifierName = "DecisionTreeClassifier"
+    colsVectorInp = ["X","Y","Z"]
+    fieldY = "Vis" #
+    lstDataFrames = MakeHystoryColumns(lstDfOriginal, nShift)
+    df_train = pd.concat(lstDataFrames)
+    lstColsShift = [f"{c}-{i}" for i in range(1, nCurrShift+1) for c in colsVectorInp] # для nCurrShift=0 lstColsShift=[]
+    colsVectorInpAll = colsVectorInp + lstColsShift
+    y_train = df_train[fieldY]
+    x_train_vect = df_train[colsVectorInpAll]
+    dictClassifiers = createDictClassifiers_BestForXYZ()
+    classifierObject = dictClassifiers[classifierName]
+    start2 = time.time()
+    classifierObject.fit(x_train_vect, y_train) # процесс обучения
+    time_elapsed = time.time() - start2
+    y_pred = classifierObject.predict(x_train_vect)
+    df_train[f"predict_{fieldY}"] = y_pred
+    print(f"{time_elapsed=}")
+    return (classifierObject, df_train, time_elapsed)
 
+#
+def MakeHystoryColumns(lstDfOriginal, nShift) :
+    lstDataframesShifted = [df.copy() for df in lstDfOriginal]
+    lstColsShift = []
+    for i in range(1, nShift+1):
+        #cols = ["X","Y","Z"]+["A","B"]
+        cols = ["X","Y","Z"]
+        #cols = ["A","B"]
+        for c in cols:
+            for dfShift in lstDataframesShifted:
+                dfShift[f'{c}-{i}'] = dfShift[c].shift(i).fillna(0)
+            lstColsShift.append(lstDataframesShifted[0].columns[-1])
+    print(lstColsShift)
+    return lstDataframesShifted
 
+RANDOM_STATE=11
 
-
-
+def createDictClassifiers_BestForXYZ() :
+    dictFastTree = {
+        #"RandomForestClassifier": ensemble.RandomForestClassifier(random_state=RANDOM_STATE), # совсем плохие показатели
+        #"ExtraTreeClassifier": tree.ExtraTreeClassifier(random_state=RANDOM_STATE), #
+        "DecisionTreeClassifier": tree.DecisionTreeClassifier(random_state=RANDOM_STATE), # лучший по последним баллам
+    }
+    #return {**dictFast}
+    #return {**dict_Test_MLPClassifier}
+    #return {**dictFast, **dictLongTrain}
+    return {**dictFastTree}
 
 
 
