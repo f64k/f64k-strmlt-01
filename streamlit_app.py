@@ -6,6 +6,8 @@ if True:
     st.html(my_stm.STYLE_CORRECTION)
     dirParams = {
         "os.getcwd": os.getcwd(),
+        "cpu_count": os.cpu_count(),
+        "environ": os.environ,
         "os.listdir": os.listdir(),
         "platform": platform.platform(),
         "node": platform.node(),
@@ -28,9 +30,19 @@ dictTestFilesIdXyz = {f.upper().replace("ID_XYZ/",""): f.upper() for f in lstRep
 @st.cache_data
 def GetListOf_XYZV_ToTrainClassifier(repo):
     lstRepoZipFiles = ["TrainData_1504_AB_gaziev.zip","TestData_1504_AB_gaziev.zip","TestData3_2204_noAB_gaziev.zip"]
-    dictTrainThreeDataframes = my_stm.load_dataframes_from_hf(REPO, lstRepoZipFiles)
+    dictTrainThreeDataframes = my_stm.load_dataframes_from_hf(repo, lstRepoZipFiles)
     lstDfOriginal = [my_stm.df_process_v_column(df) for df in dictTrainThreeDataframes.values()]
     return lstDfOriginal
+
+@st.cache_data
+def GetCachedClassifier(lstDfOriginal, nHystorySteps):
+    classifier_object, df_train_with_predict, time_elapsed = my_stm.GetClassifier(lstDfOriginal, nHystorySteps)
+    #st.session_state.df_train_with_predict = df_train_with_predict
+    columns_xyzv = [c for c in df_train_with_predict.columns if "Vis" in c] + [c for c in df_train_with_predict.columns if c[0] in "XYZ"]
+    st.session_state.df_train_with_predict = df_train_with_predict[columns_xyzv]
+    print(f"GetCachedClassifier() : {time_elapsed=}")
+    return classifier_object
+
 
 def ReRun() :
     try: st.rerun()
@@ -63,7 +75,7 @@ with st.container():
     cols1 = st.columns([1,12], vertical_alignment="center")
     strBanner = "🔮 проверка предсказаний по пакетам ID_XYZ. \n 📜 формат CSV. \n 🧊 названия столбцов ID;X;Y;Z. \n 📐 размер пакетов одинаковый."
     cols1[0].popover("❓", help=strBanner).markdown(DescriptionMarkdown())
-    cols1[1].info(strBanner)
+    cols1[1].info("🔮 проверка предсказаний V по пакетам ID;X;Y;Z")
 
 #col1, col2 = st.columns([2,5])
 col1, col2 = st.columns([4,2])
@@ -126,14 +138,16 @@ if selectedFile is not None:
         #col1.dataframe(dfShow, height=400)
         pack_size = list(set(dgID.apply(len)))[0]
         lstDfOriginal = GetListOf_XYZV_ToTrainClassifier(REPO)
-        classifier_object, df_train_with_predict, time_elapsed = my_stm.GetClassifier(lstDfOriginal, pack_size-1)
+        #classifier_object, df_train_with_predict, time_elapsed = my_stm.GetClassifier(lstDfOriginal, pack_size-1)
+        classifier_object = GetCachedClassifier(lstDfOriginal, pack_size-1) # сделал закэшированную версию
         col2.popover(type(classifier_object).__name__).write(type(classifier_object))
         # прогноз на обучающей выборке
-        columns_xyzv = [c for c in df_train_with_predict.columns if "Vis" in c] + [c for c in df_train_with_predict.columns if c[0] in "XYZ"]
+        #columns_xyzv = [c for c in df_train_with_predict.columns if "Vis" in c] + [c for c in df_train_with_predict.columns if c[0] in "XYZ"]
         #col2.dataframe(df_train_with_predict[columns_xyzv], height=650)
         # расчет пакетов
         xyz = ["X","Y","Z"]
-        df_packs_reshaped = dgID.apply(lambda df: pd.Series(df[xyz].values[::-1].reshape(1,-1)[0])).reset_index()
+        df_packs_reshaped = dgID.apply(lambda df: pd.Series(df[xyz].values[::-1].reshape(1,-1)[0])).reset_index() # правильный порядок
+        #df_packs_reshaped = dgID.apply(lambda df: pd.Series(df[xyz].values.reshape(1,-1)[0])).reset_index() # тестовый порядок xyz наоборот
         x_test_vect = df_packs_reshaped.iloc[:,1:]
         df_packs_reshaped["Прогноз_V"] = classifier_object.predict(x_test_vect.values)
         col2.dataframe(df_packs_reshaped[["ID","Прогноз_V"]], height=620)

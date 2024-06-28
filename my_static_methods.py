@@ -133,7 +133,6 @@ def GetClassifier(lstDfOriginal, nHystorySteps) :
     time_elapsed = time.time() - start2
     y_pred = classifierObject.predict(x_train_vect)
     df_train[f"predict_{fieldY}"] = y_pred
-    print(f"{time_elapsed=}")
     return (classifierObject, df_train, time_elapsed)
 
 #
