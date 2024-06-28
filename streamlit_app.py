@@ -75,7 +75,7 @@ with st.container():
     cols1 = st.columns([1,12], vertical_alignment="center")
     strBanner = "🔮 проверка предсказаний по пакетам ID_XYZ. \n 📜 формат CSV. \n 🧊 названия столбцов ID;X;Y;Z. \n 📐 размер пакетов одинаковый."
     cols1[0].popover("❓", help=strBanner).markdown(DescriptionMarkdown())
-    cols1[1].info("🔮 проверка предсказаний V по пакетам ID;X;Y;Z")
+    cols1[1].info("🧙 проверка предсказаний V по пакетам ID;X;Y;Z 🔮")
 
 #col1, col2 = st.columns([2,5])
 col1, col2 = st.columns([4,2])
